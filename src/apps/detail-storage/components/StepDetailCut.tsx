@@ -109,13 +109,13 @@ Replace or insert the product shoes from the reference images into the backgroun
                 };
 
                 const response = await ai.models.generateContent({
-                    model: 'gemini-3-pro-image-preview',
+                    model: 'imagen-3.0-generate-001',
                     contents,
                     config: {
-                        imageConfig: {
-                            aspectRatio: "3:4"
-                        },
-                        responseModalities: [Modality.IMAGE],
+                        // imageConfig: {
+                        //     aspectRatio: "3:4"
+                        // },
+                        // responseModalities: [Modality.IMAGE],
                     },
                 });
 

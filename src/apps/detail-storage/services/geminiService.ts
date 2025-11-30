@@ -1,44 +1,40 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-// Helper to get GoogleGenAI client
-const getGenAIClient = (): GoogleGenAI => {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) throw new Error("API key not found");
-    return new GoogleGenAI({ apiKey });
-};
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { GoogleGenAI, type Part } from '@google/genai';
 
 // ============================================================================
-// [ANTI-GRAVITY ENGINE] TYPE DEFINITIONS
+// [ANTI-GRAVITY ENGINE] CORE CONFIGURATION
 // ============================================================================
+
+// Type Definitions
 export type Effect =
-    'natural_light' |
-    'cinematic' |
-    'side_lighting' |
-    'beautify' |
-    'custom' |
-    'studio_minimal_prop' |
-    'studio_natural_floor' |
-    'studio_texture_emphasis' |
-    'studio_cinematic';
+    | 'beautify'
+    | 'studio_minimal_prop'
+    | 'studio_natural_floor'
+    | 'studio_texture_emphasis'
+    | 'studio_cinematic'
+    | 'custom';
 
-// Helper: File to Base64
+// Helper: File to Base64 (Full Data URI)
 const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise<string>((resolve, reject) => {
+    return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-        reader.onerror = reject;
         reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (error) => reject(error);
     });
 };
 
-// ============================================================================
-// [ANTI-GRAVITY ENGINE] PROMPT LOGIC
-// ============================================================================
+// Helper: File to Raw Base64 (For API)
+const fileToRawBase64 = async (file: File): Promise<string> => {
+    const base64Url = await fileToBase64(file);
+    return base64Url.split(',')[1];
+};
+
+// Helper: Get GenAI Client (New SDK)
+const getGenAIClient = () => {
+    // @ts-ignore
+    return new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY });
+};
 
 /**
  * 효과(Effect) 및 포즈(Pose)에 따른 3D 렌더링 프롬프트를 생성합니다.
@@ -140,6 +136,8 @@ ${poseInstruction}
     *   **Blacks:** FORCE "JET BLACK" (#050505). Remove brown reflections.
     *   **Whites:** Crisp, clean white. No cream tint.
 3.  **BACKGROUND:** PURE WHITE (#FFFFFF). No cast shadows (Floating).
+
+**OUTPUT:** Generate an IMAGE. Do not output text.
 `;
     }
 
@@ -158,6 +156,8 @@ ${poseInstruction}
 *   **Prop:** Single geometric concrete cube or cylinder. Shoe leaning against it.
 *   **Lighting:** Softbox Window Light (Top-Left). Soft, diffused shadows.
 *   **Vibe:** Calm, museum-like, sophisticated.
+
+**OUTPUT:** Generate an IMAGE. Do not output text.
 `;
     }
 
@@ -169,6 +169,8 @@ ${poseInstruction}
 *   **Lighting:** Hard Sunlight (Direct Sun, 5500K). High contrast.
 *   **Shadow:** Cast a "Gobo" shadow (Window frame or Plant leaf) across the floor.
 *   **Vibe:** Energetic, organic, summer street.
+
+**OUTPUT:** Generate an IMAGE. Do not output text.
 `;
     }
 
@@ -179,6 +181,8 @@ ${poseInstruction}
 *   **Background:** Dark Charcoal Grey (#333333) seamless infinity wall.
 *   **Lighting:** Low-angle "Raking Light". Grazes the surface to pop texture depth (suede/mesh).
 *   **Vibe:** Masculine, technical, heavy, premium.
+
+**OUTPUT:** Generate an IMAGE. Do not output text.
 `;
     }
 
@@ -190,6 +194,8 @@ ${poseInstruction}
 *   **Atmosphere:** Low-lying fog/mist/dry-ice.
 *   **Action:** "Levitation" illusion (Shoe floating slightly above ground).
 *   **Lighting:** Top-down "God Ray" spotlight. Rim lighting on edges.
+
+**OUTPUT:** Generate an IMAGE. Do not output text.
 `;
     }
 
@@ -200,10 +206,12 @@ ${poseInstruction}
 *   **Instruction:** Seamlessly integrate the shoe into the provided custom background.
 *   **Match:** Perspective, Light direction, and Shadow casting.
 *   **Output:** Photorealistic composite.
+
+**OUTPUT:** Generate an IMAGE. Do not output text.
 `;
     }
 
-    return `${SYSTEM_ROLE} Photorealistic product shot.`;
+    return `${SYSTEM_ROLE} Photorealistic product shot. \n**OUTPUT:** Generate an IMAGE.`;
 }
 
 // ============================================================================
@@ -228,31 +236,33 @@ export const applyShoeEffect = async (
     const prompt = getPromptForEffect(effect, poseId);
 
     // 2. Payload Construction
-    const imageParts: InlineDataPart[] = [];
+    const imageParts: Part[] = [];
 
     // 배경 이미지가 있으면 먼저 추가 (참조용)
     if (effect === 'custom' && customBackground) {
-        imageParts.push({ inlineData: { data: await fileToBase64(customBackground), mimeType: customBackground.type } });
+        imageParts.push({ inlineData: { data: await fileToRawBase64(customBackground), mimeType: customBackground.type } });
     }
 
     // 원본 신발 이미지 추가
     for (const file of files) {
-        imageParts.push({ inlineData: { data: await fileToBase64(file), mimeType: file.type } });
+        imageParts.push({ inlineData: { data: await fileToRawBase64(file), mimeType: file.type } });
     }
 
     const parts = [...imageParts, { text: prompt }];
 
-    // 3. Gemini 3.0 Pro Call (High-Res Configuration)
+    // 3. Gemini 2.0 Flash Call (Multimodal)
     onProgressUpdate('Anti-Gravity: 3D 렌더링 및 리터칭 실행...');
     const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-image-preview', // 최신 3.0 모델 필수
+        model: 'gemini-2.0-flash-exp', // Reverted to Gemini 2.0 Flash
         contents: { parts },
         config: {
-            responseModalities: [Modality.IMAGE],
-            imageConfig: {
-                aspectRatio: '4:3', // [중요] 가로형(Landscape) 강제
-                imageSize: '2K'     // 고해상도 출력
-            }
+            // responseModalities: [Modality.IMAGE], // Removed to avoid INVALID_ARGUMENT
+            safetySettings: [
+                { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+                { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+                { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+                { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH }
+            ]
         },
     });
 
@@ -265,6 +275,7 @@ export const applyShoeEffect = async (
 
     const candidate = response.candidates?.[0];
     if (!candidate?.content?.parts?.[0]) {
+        console.error('Generation failed. Full response:', JSON.stringify(response, null, 2));
         throw new Error('오류: 이미지가 생성되지 않았습니다.');
     }
 
@@ -273,7 +284,13 @@ export const applyShoeEffect = async (
             return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
         }
     }
-    throw new Error('이미지 데이터 누락');
+
+    // If we get here, we have parts but no inlineData (likely text)
+    const textPart = candidate.content.parts.find(p => p.text);
+    console.error('Image data missing. Response text:', textPart?.text);
+    console.error('Full response:', JSON.stringify(response, null, 2));
+
+    throw new Error(`이미지 데이터 누락. 모델 응답: ${textPart?.text?.slice(0, 100) || '없음'}`);
 };
 
 /**
@@ -297,6 +314,7 @@ export const applyColorChange = async (
 **SYSTEM ROLE:** Expert Digital Retoucher.
 **TASK:** Recolor the UPPER material only.
 **CONSTRAINT:** Keep OUTSOLE and LOGO 100% UNTOUCHED.
+**OUTPUT FORMAT:** Generate an IMAGE. Do not output text.
 
 **EXECUTION:**
 1.  **Masking:** Isolate 'Upper' material.
@@ -306,24 +324,25 @@ export const applyColorChange = async (
 `;
 
     const parts = [
-        { inlineData: { data: await fileToBase64(baseImageFile), mimeType: baseImageFile.type } },
+        { inlineData: { data: await fileToRawBase64(baseImageFile), mimeType: baseImageFile.type } },
         { text: colorChangePrompt }
     ];
 
     if (customColorImage) {
-        parts.push({ inlineData: { data: await fileToBase64(customColorImage), mimeType: customColorImage.type } });
+        parts.push({ inlineData: { data: await fileToRawBase64(customColorImage), mimeType: customColorImage.type } });
     }
 
     onProgressUpdate('Anti-Gravity: 색상 적용 렌더링...');
     const colorResponse = await ai.models.generateContent({
-        model: 'gemini-3-pro-image-preview',
+        model: 'gemini-2.0-flash-exp', // Reverted to Gemini 2.0 Flash
         contents: { parts },
         config: {
-            responseModalities: [Modality.IMAGE],
-            imageConfig: {
-                aspectRatio: '1:1', // 색상 변경은 1:1 유지
-                imageSize: '2K'
-            }
+            safetySettings: [
+                { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+                { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+                { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+                { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH }
+            ]
         },
     });
 
@@ -364,9 +383,12 @@ export const chatWithGemini = async (
     message: string,
     history: { role: 'user' | 'model', parts: { text: string }[] }[]
 ): Promise<string> => {
-    // @ts-ignore
-    const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY });
-    const model = ai.models.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    // Use GoogleGenerativeAI (Old SDK) for chat functionality as it supports startChat
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) throw new Error("API key not found");
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const chat = model.startChat({
         history: history,
@@ -527,18 +549,14 @@ Minimal retouching, keep skin texture and pores visible.
 Do not make the face look like an AI-generated doll.
 Do not over-smooth the skin.
 No anime style, no illustration, no 3D render.
-No uncanny valley eyes, no extreme symmetry, no plastic shine.
-${gender === 'male' ? "No lipstick, no feminine makeup, no heavy eyeshadow." : ""}
-          `;
 
+[OUTPUT]
+Generate an IMAGE. Do not output text.
+`;
                     const response = await ai.models.generateContent({
-                        model: 'gemini-3-pro-image-preview',
+                        model: 'gemini-2.0-flash-exp', // Reverted to Gemini 2.0 Flash
                         contents: { parts: [{ text: prompt }] },
                         config: {
-                            imageConfig: {
-                                aspectRatio: '1:1',
-                                imageSize: '1K'
-                            },
                             safetySettings: [
                                 { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
                                 { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
@@ -548,20 +566,23 @@ ${gender === 'male' ? "No lipstick, no feminine makeup, no heavy eyeshadow." : "
                         }
                     });
 
-                    for (const part of response.candidates?.[0]?.content?.parts || []) {
-                        if (part.inlineData) {
-                            return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+                    const candidate = response.candidates?.[0];
+                    if (candidate?.content?.parts) {
+                        for (const part of candidate.content.parts) {
+                            if (part.inlineData) {
+                                return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
+                            }
                         }
                     }
                     return null;
-                } catch (e: any) {
-                    console.error(`Face generation error for image ${idx}:`, e);
+                } catch (e) {
+                    console.error('Face generation error:', e);
                     return null;
                 }
             });
 
         const results = await Promise.all(promises);
-        return results.filter((url): url is string => url !== null);
+        return results.filter((r): r is string => r !== null);
     } catch (e) {
         console.error('generateFaceBatch error:', e);
         throw e;
@@ -569,38 +590,33 @@ ${gender === 'male' ? "No lipstick, no feminine makeup, no heavy eyeshadow." : "
 };
 
 /**
- * Upscale a face image to higher resolution
+ * Upscale a face image using Gemini 2.0 Flash (Client-side)
  */
-export const upscaleFace = async (base64Image: string): Promise<string> => {
+export const upscaleFace = async (
+    faceBase64: string
+): Promise<string> => {
     try {
         const ai = getGenAIClient();
-
-        const dataPart = base64Image.split(',')[1] || base64Image;
-        const mimeMatch = base64Image.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/);
-        const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+        const faceData = faceBase64.split(',')[1] || faceBase64;
 
         const prompt = `
-[TASK: UPSCALE & ENHANCE]
-Re-generate this portrait in 4K resolution.
-Maintain the exact same face, identity, pose, lighting, and composition.
-Significantly improve skin texture, hair details, and eye sharpness.
-Make it look like a high-end commercial beauty shot.
-Output: High-fidelity 4K photograph.
-        `;
+[TASK]
+Upscale this face image to 4K resolution.
+Enhance skin texture, eye details, and hair strands.
+Keep the identity 100% same.
+Do not change the face. Just improve quality.
+OUTPUT: Generate an IMAGE.
+`;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-3-pro-image-preview',
+            model: 'gemini-2.0-flash-exp', // Reverted to Gemini 2.0 Flash
             contents: {
                 parts: [
-                    { inlineData: { mimeType, data: dataPart } },
+                    { inlineData: { data: faceData, mimeType: 'image/png' } },
                     { text: prompt }
                 ]
             },
             config: {
-                imageConfig: {
-                    aspectRatio: '1:1',
-                    imageSize: '4K'
-                },
                 safetySettings: [
                     { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
                     { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
@@ -612,7 +628,7 @@ Output: High-fidelity 4K photograph.
 
         for (const part of response.candidates?.[0]?.content?.parts || []) {
             if (part.inlineData) {
-                return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+                return `data: ${part.inlineData.mimeType}; base64, ${part.inlineData.data} `;
             }
         }
         throw new Error("Upscaling failed: No image returned");
@@ -623,7 +639,7 @@ Output: High-fidelity 4K photograph.
 };
 
 /**
- * Extract product info from images using Gemini 1.5 Flash (Client-side)
+ * Extract product info from images using Gemini 2.0 Flash (Client-side)
  */
 export const extractProductInfoFromImages = async (
     images: { base64: string; mimeType: string }[],
@@ -634,7 +650,7 @@ export const extractProductInfoFromImages = async (
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.0-flash-exp',
         generationConfig: { responseMimeType: "application/json" }
     });
 
@@ -642,7 +658,7 @@ export const extractProductInfoFromImages = async (
         ...images.map(img => ({
             inlineData: {
                 mimeType: img.mimeType,
-                data: img.base64
+                data: img.base64.split(',')[1] || img.base64 // Ensure raw base64
             }
         })),
         { text: promptText }
@@ -653,10 +669,20 @@ export const extractProductInfoFromImages = async (
     const text = response.text();
 
     try {
+        // Robust JSON extraction: Find the first '{' and last '}'
+        const startIndex = text.indexOf('{');
+        const endIndex = text.lastIndexOf('}');
+
+        if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+            const jsonString = text.substring(startIndex, endIndex + 1);
+            return JSON.parse(jsonString);
+        }
+
+        // Fallback: Try parsing the whole text if no braces found (unlikely for JSON)
         return JSON.parse(text);
     } catch (e) {
         console.error("Failed to parse JSON response:", text);
-        throw new Error("AI 응답을 분석할 수 없습니다.");
+        throw new Error("AI 응답을 분석할 수 없습니다. (JSON 파싱 실패)");
     }
 };
 
@@ -672,7 +698,7 @@ export const swapFace = async (
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-2.0-flash-exp', // Reverted to Gemini 2.0 Flash
         generationConfig: {
             temperature: 0.4,
             topP: 0.95,
@@ -684,24 +710,25 @@ export const swapFace = async (
     const sourceMime = sourceMimeMatch ? sourceMimeMatch[1] : 'image/png';
 
     const targetBase64 = await fileToBase64(targetImageFile);
+    const targetData = targetBase64.split(',')[1] || targetBase64;
 
     const prompt = `
-[TASK: FACE SWAP]
-Replace the face of the model in the [TARGET IMAGE] with the face from the [SOURCE FACE].
-1.  **Identity:** The face in the output MUST match the [SOURCE FACE] identity.
-2.  **Context:** Keep the [TARGET IMAGE] body, pose, hair (if possible/relevant), clothing, and background EXACTLY the same.
-3.  **Blending:** Match the skin tone, lighting, and grain of the [TARGET IMAGE] for a seamless photorealistic result.
-4.  **Output:** High-fidelity photograph.
+                    [TASK: FACE SWAP]
+Replace the face of the model in the[TARGET IMAGE]with the face from the[SOURCE FACE].
+                    1. ** Identity:** The face in the output MUST match the[SOURCE FACE]identity.
+2. ** Context:** Keep the[TARGET IMAGE]body, pose, hair(if possible / relevant), clothing, and background EXACTLY the same.
+3. ** Blending:** Match the skin tone, lighting, and grain of the[TARGET IMAGE]for a seamless photorealistic result.
+4. ** Output:** High - fidelity photograph.
+5. ** FORMAT:** Generate an IMAGE. Do not output text.
 `;
 
     const result = await model.generateContent([
         { text: "SOURCE FACE:" },
         { inlineData: { mimeType: sourceMime, data: sourceData } },
         { text: "TARGET IMAGE:" },
-        { inlineData: { mimeType: targetImageFile.type, data: targetBase64 } },
+        { inlineData: { mimeType: targetImageFile.type, data: targetData } },
         { text: prompt }
     ]);
-
     const response = result.response;
 
     for (const part of response.candidates?.[0]?.content?.parts || []) {
@@ -710,4 +737,66 @@ Replace the face of the model in the [TARGET IMAGE] with the face from the [SOUR
         }
     }
     throw new Error("Face swap failed: No image returned");
+};
+
+// ============================================================================
+// [ANTI-GRAVITY ENGINE] SHOE REPLACEMENT
+// ============================================================================
+
+/**
+ * Replace shoes in a model image with a reference product.
+ */
+export const replaceShoesInImage = async (
+    sourceImageFile: File,
+    productImageFiles: File[]
+): Promise<string> => {
+    const client = getGenAIClient();
+
+    // Fix: Ensure raw base64
+    const srcBase64Full = await fileToBase64(sourceImageFile);
+    const srcBase64 = srcBase64Full.split(',')[1] || srcBase64Full;
+
+    // Limit to 2 reference images for speed
+    const refs = await Promise.all(productImageFiles.slice(0, 2).map(async f => {
+        const b64 = await fileToBase64(f);
+        return {
+            inlineData: { data: b64.split(',')[1] || b64, mimeType: f.type }
+        };
+    }));
+
+    const EDITING_PROMPT = `
+                    [TASK] Precise Object Replacement
+                    [INSTRUCTION] Replace the shoes in Image 1 with the Reference Product.
+    [CRITICAL RULES]
+                    1. Target: Change ONLY the shoes.
+    2. Preservation: The model's face, skin, legs, clothing, and background MUST remain pixel-perfect.
+                    3. Integration: Match lighting and perspective.
+    [OUTPUT]
+    Generate an IMAGE. Do not output text.
+    `;
+
+    try {
+        const response = await client.models.generateContent({
+            model: 'gemini-2.0-flash-exp', // Reverted to Gemini 2.0 Flash
+            contents: [
+                { text: "Edit Image 1 using references." },
+                { inlineData: { data: srcBase64, mimeType: sourceImageFile.type } },
+                ...refs,
+                { text: EDITING_PROMPT }
+            ],
+            config: {
+                // responseMimeType: 'application/json' 
+            }
+        });
+
+        const part = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+        if (part && part.inlineData && part.inlineData.data) {
+            return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+        }
+
+        throw new Error("Shoe replacement failed: No image returned");
+    } catch (e) {
+        console.error('replaceShoesInImage error:', e);
+        throw e;
+    }
 };

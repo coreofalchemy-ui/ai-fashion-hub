@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { extractProductInfoFromImages } from '../services/geminiService';
 
@@ -42,8 +41,121 @@ interface Step1PersonalShopperProps {
   initialImages?: UploadedImage[];
   onAddCustomText?: (text: string) => void;
   onNext?: () => void;
-  onAddToPreview?: (content: string, type: 'section' | 'image') => void;
+  onAddToPreview?: (content: string, type: 'section' | 'image', title?: string) => void;
 }
+
+// --- HTML Generator Functions ---
+
+const generateLineNameHTML = (data: ProductDetailInfo) => {
+  return `<div style="text-align:center;margin-bottom:8px;">
+    <div style="font-size:12px;color:#666;letter-spacing:0.05em;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+      ${data.lineName || 'PREMIUM COLLECTION'}
+    </div>
+  </div>`;
+};
+
+const generateProductNameHTML = (data: ProductDetailInfo) => {
+  return `<div style="text-align:center;margin-bottom:20px;">
+    <h2 style="font-size:26px;font-weight:700;margin:0;word-break:keep-all;line-height:1.3;font-family:'Inter', sans-serif;color:#111;">
+      "${data.productName}"
+    </h2>
+  </div>`;
+};
+
+const generateIntroHTML = (data: ProductDetailInfo) => {
+  return `<div style="text-align:center;margin-bottom:40px;">
+    <div style="font-size:15px;color:#333;max-width:600px;margin:0 auto;word-break:keep-all;line-height:1.8;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+      ${data.intro ? data.intro.replace(/\n/g, '<br/>') : ''}
+    </div>
+  </div>`;
+};
+
+const generateStyleHTML = (data: ProductDetailInfo) => {
+  return `<div style="margin-bottom:40px;text-align:center;">
+    <p style="font-size:14px;color:#555;max-width:640px;margin:0 auto;word-break:keep-all;line-height:1.7;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+      ${data.style}
+    </p>
+  </div>`;
+};
+
+const generateTechHTML = (data: ProductDetailInfo) => {
+  return `<div style="background-color:#f8f9fa;border-radius:8px;padding:30px;margin-bottom:40px;display:flex;align-items:center;gap:30px;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+    <div style="flex:0 0 100px;text-align:left;">
+      <div style="font-size:10px;font-weight:700;color:#888;letter-spacing:0.1em;margin-bottom:6px;text-transform:uppercase;">
+        ${data.techLabel || 'TECHNOLOGY'}
+      </div>
+      <div style="font-size:18px;font-weight:700;color:#111;font-family:'Inter', sans-serif;">
+        ${data.techTitle || 'Core Tech'}
+      </div>
+    </div>
+    <div style="flex:1;border-left:1px solid #ddd;padding-left:30px;">
+      <p style="font-size:13px;color:#444;margin:0;line-height:1.6;">
+        ${data.techDesc || data.tech}
+      </p>
+    </div>
+  </div>`;
+};
+
+const generateInfoTableHTML = (data: ProductDetailInfo) => {
+  return `<div style="margin-bottom:30px;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+    <h3 style="font-size:13px;font-weight:700;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:0;font-family:'Inter', sans-serif;color:#111;">
+      PRODUCT INFO
+    </h3>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <colgroup>
+        <col style="width:20%;" />
+        <col style="width:80%;" />
+      </colgroup>
+      <tr style="border-bottom:1px solid #eee;">
+        <td style="padding:12px 0;color:#666;font-weight:500;font-family:'Inter', sans-serif;">Color</td>
+        <td style="padding:12px 0;color:#111;">${data.color}</td>
+      </tr>
+      <tr style="border-bottom:1px solid #eee;">
+        <td style="padding:12px 0;color:#666;font-weight:500;font-family:'Inter', sans-serif;">Material</td>
+        <td style="padding:12px 0;color:#111;">
+          <span style="margin-right:10px;">[Upper] ${data.upperMaterial}</span>
+          <span style="margin-right:10px;">[Lining] ${data.liningMaterial}</span>
+          <span>[Sole] ${data.soleMaterial}</span>
+        </td>
+      </tr>
+      <tr style="border-bottom:1px solid #eee;">
+        <td style="padding:12px 0;color:#666;font-weight:500;font-family:'Inter', sans-serif;">Size / Height</td>
+        <td style="padding:12px 0;color:#111;">
+          ${data.sizeSpec} / 굽높이 ${data.outsoleHeight} (속굽 ${data.insoleHeight})
+        </td>
+      </tr>
+      <tr style="border-bottom:1px solid #eee;">
+        <td style="padding:12px 0;color:#666;font-weight:500;font-family:'Inter', sans-serif;">Origin</td>
+        <td style="padding:12px 0;color:#111;">${data.origin}</td>
+      </tr>
+    </table>
+  </div>`;
+};
+
+const generateSizeGuideHTML = (data: ProductDetailInfo) => {
+  return `<div style="background:linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);border:1px solid #ffcdd2;border-left:4px solid #ef5350;border-radius:8px;padding:20px;margin-top:30px;box-shadow:0 2px 8px rgba(239,83,80,0.05);font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+    <div style="display:flex;align-items:center;margin-bottom:8px;">
+      <span style="display:inline-block;width:16px;height:16px;background:#ef5350;color:#fff;font-size:12px;text-align:center;line-height:16px;border-radius:2px;margin-right:8px;">✓</span>
+      <h4 style="font-size:14px;font-weight:700;color:#d32f2f;margin:0;font-family:'Inter', sans-serif;">SIZE GUIDE</h4>
+    </div>
+    <p style="font-size:13px;color:#333;font-weight:700;line-height:1.6;margin:0;">
+      ${data.careGuide || '정사이즈 착용을 권장합니다.'}
+    </p>
+  </div>`;
+};
+
+const generateFullProductHTML = (data: ProductDetailInfo) => {
+  return `<!-- COA 상품 상세 정보 (Text Only) -->
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#111;line-height:1.6;max-width:800px;margin:0 auto;padding:40px 10px;">
+  ${generateLineNameHTML(data)}
+  ${generateProductNameHTML(data)}
+  ${generateIntroHTML(data)}
+  ${data.style ? generateStyleHTML(data) : ''}
+  ${generateTechHTML(data)}
+  ${generateInfoTableHTML(data)}
+  ${generateSizeGuideHTML(data)}
+</div>`;
+};
 
 const FileDropzone: React.FC<{
   onImagesSelected: (images: UploadedImage[]) => void;
@@ -165,14 +277,26 @@ const Step1PersonalShopper: React.FC<Step1PersonalShopperProps> = ({
       const result = await extractProductInfoFromImages(images.map(img => ({ base64: img.base64, mimeType: img.mimeType })), `
 럭셔리 브랜드 카피라이터 및 제품 분석가로서 제품 이미지를 분석하여 JSON으로 응답:
 {
-  "lineName": "라인명", "productName": "제품명", "category": "카테고리",
-    "color": "컬러", "upper": "갑피 소재", "lining": "안감", "sole": "밑창", "insole": "깔창",
-      "outsoleHeightCm": "아웃솔 높이", "insoleHeightCm": "인솔 높이", "totalHeightCm": "총 높이",
-        "intro": "핵심 가치", "style": "스타일링", "tech": "소재 특징",
-          "estimatedWidth": "발볼 너비 (예: 10cm)",
-            "estimatedLength": "총 길이 (예: 27cm)",
-              "estimatedHeight": "총 높이 (예: 12cm)",
-                "careGuide": "소재에 따른 상세 관리 방법 (가죽/합성피혁/스웨이드 등 소재 특성에 맞춰 3줄 이상 작성)"
+  "lineName": "라인명 (영문)", 
+  "productName": "제품명 (영문)", 
+  "intro": "스타일링 제안: 어떤 룩(캐주얼, 포멀 등)을 즐겨 입는 사람에게 추천하는지, 어떤 바지나 자켓과 매칭하면 좋은지 구체적으로 제안하는 매력적인 문구 (한국어)",
+  "style": "디자인 설명: 제품의 디자인 컨셉, 쉐입, 제작 방식, 디테일한 특징을 설명 (한국어)",
+  "techLabel": "기술 라벨 (영문, 예: TECHNOLOGY)",
+  "techTitle": "기술명 (영문, 예: CarbonLite)",
+  "techDesc": "기술 설명: 소재나 기술의 기능적 장점 설명 (한국어)",
+  "color": "컬러 (한국어)", 
+  "upper": "갑피 소재 (한국어)", 
+  "lining": "안감 (한국어)", 
+  "sole": "밑창 (한국어)", 
+  "insole": "깔창 (한국어)",
+  "outsoleHeightCm": "아웃솔 높이 (숫자만)", 
+  "insoleHeightCm": "인솔 높이 (숫자만)", 
+  "sizeSpec": "사이즈 범위 (예: 230-280mm)",
+  "origin": "원산지 (한국어)",
+  "careGuide": "사이즈 가이드: 사이즈 선택 팁 (정사이즈, 발볼 넓음 등) (한국어)",
+  "estimatedWidth": "발볼 너비 (예: 10cm)",
+  "estimatedLength": "총 길이 (예: 27cm)",
+  "estimatedHeight": "총 높이 (예: 12cm)"
 }
 `);
 
@@ -211,85 +335,54 @@ const Step1PersonalShopper: React.FC<Step1PersonalShopperProps> = ({
 
       setInfo(newInfo);
 
-      // 프리뷰에 자동 추가
-      if (onAddToPreview) {
-        // 1. 제품 정보 섹션
-        const infoHtml = `
-  < div style = "padding: 40px 20px; text-align: center; font-family: 'Inter', sans-serif;" >
-  <h2 style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">${result.productName}</h2>
-  <p style="font-size: 14px; color: #666; margin-bottom: 30px;">${result.lineName} | ${result.color}</p>
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 400px; margin: 0 auto; text-align: left; font-size: 13px;">
-    <div><strong>UPPER</strong> ${result.upper}</div>
-    <div><strong>LINING</strong> ${result.lining}</div>
-    <div><strong>SOLE</strong> ${result.sole}</div>
-    <div><strong>HEEL</strong> ${result.outsoleHeightCm}</div>
-  </div>
-</div > `;
-        onAddToPreview(infoHtml, 'section');
-
-        // 2. 인트로 섹션
-        if (result.intro) {
-          const introHtml = `
-  < div style = "padding: 60px 20px; text-align: center; background-color: #f9f9f9;" >
-  <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 20px;">DESIGN PHILOSOPHY</h3>
-  <p style="font-size: 15px; line-height: 1.8; color: #444; max-width: 600px; margin: 0 auto;">
-    ${result.intro}
-  </p>
-</div > `;
-          onAddToPreview(introHtml, 'section');
-        }
-
-        // 3. 테크 섹션
-        if (newInfo.techTitle) {
-          const techHtml = `
-  < div style = "padding: 50px 20px; text-align: center;" >
-  <span style="display: inline-block; padding: 5px 10px; border: 1px solid #000; font-size: 10px; font-weight: bold; margin-bottom: 20px;">${newInfo.techLabel}</span>
-  <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 15px;">${newInfo.techTitle}</h3>
-  <p style="font-size: 14px; color: #666; max-width: 500px; margin: 0 auto;">${newInfo.techDesc}</p>
-</div > `;
-          onAddToPreview(techHtml, 'section');
-        }
-
-        // 4. 사이즈 정보 섹션 (New)
-        if (result.estimatedWidth || result.estimatedLength || result.estimatedHeight) {
-          const sizeHtml = `
-  < div style = "padding: 40px 20px; background-color: #fff; border-top: 1px solid #eee;" >
-  <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 20px; text-align: center;">SIZE INFORMATION (Estimated)</h3>
-  <div style="display: flex; justify-content: center; gap: 30px; text-align: center;">
-    ${result.estimatedLength ? `<div><div style="font-size: 12px; color: #888;">Length</div><div style="font-weight: bold;">${result.estimatedLength}</div></div>` : ''}
-    ${result.estimatedWidth ? `<div><div style="font-size: 12px; color: #888;">Width</div><div style="font-weight: bold;">${result.estimatedWidth}</div></div>` : ''}
-    ${result.estimatedHeight ? `<div><div style="font-size: 12px; color: #888;">Height</div><div style="font-weight: bold;">${result.estimatedHeight}</div></div>` : ''}
-  </div>
-  <p style="font-size: 11px; color: #999; text-align: center; margin-top: 15px;">* AI 분석에 의한 추정치로 실제 제품과 차이가 있을 수 있습니다.</p>
-</div > `;
-          onAddToPreview(sizeHtml, 'section');
-        }
-
-        // 5. 소재 관리 가이드 섹션 (New)
-        if (result.careGuide) {
-          const careHtml = `
-  < div style = "padding: 40px 20px; background-color: #f5f5f5;" >
-  <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 15px;">MATERIAL CARE GUIDE</h3>
-  <div style="font-size: 13px; line-height: 1.6; color: #555; white-space: pre-line;">
-    ${result.careGuide}
-  </div>
-</div > `;
-          onAddToPreview(careHtml, 'section');
-        }
-      }
-
       alert(
         `✅ AI 분석 완료!\n\n` +
         `📦 제품명: ${result.productName} \n` +
-        `📏 사이즈 추정: ${result.estimatedLength || '-'} / ${result.estimatedWidth || '-'}\n` +
-        `🧼 관리법: ${result.careGuide ? '생성됨' : '-'}\n\n` +
-        `프리뷰에 모든 섹션이 추가되었습니다.`
+        `내용을 확인하고 '프리뷰에 추가' 버튼을 눌러주세요.`
       );
     } catch (err) {
       console.error(err);
       alert("AI 분석 중 오류가 발생했습니다: " + (err as Error).message);
     }
     finally { setAnalyzing(false); }
+  };
+
+  const handleManualAddToPreview = () => {
+    if (!onAddToPreview) return;
+
+    // 1. 텍스트 정보 개별 추가
+    if (info.lineName) onAddToPreview(generateLineNameHTML(info), 'section', '소제목');
+    if (info.productName) onAddToPreview(generateProductNameHTML(info), 'section', '대제목');
+    if (info.intro) onAddToPreview(generateIntroHTML(info), 'section', '설명 1');
+    if (info.style) onAddToPreview(generateStyleHTML(info), 'section', '설명 2');
+    if (info.techLabel || info.techTitle) onAddToPreview(generateTechHTML(info), 'section', '기술 뱃지');
+    onAddToPreview(generateInfoTableHTML(info), 'section', 'Product Info');
+    if (info.careGuide) onAddToPreview(generateSizeGuideHTML(info), 'section', 'Size Guide');
+
+    // 2. 업로드된 이미지들을 개별 블록으로 추가
+    if (images.length > 0) {
+      images.forEach((img, idx) => {
+        const imageUrl = img.base64 ? `data:${img.mimeType};base64,${img.base64}` : img.previewUrl;
+        onAddToPreview(imageUrl, 'image', `Image ${idx + 1}`);
+      });
+    }
+  };
+
+  const downloadProductHTML = () => {
+    if (images.length === 0) {
+      alert("이미지가 없습니다.");
+      return;
+    }
+    const htmlContent = generateFullProductHTML(info);
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${info.productName || 'product'}_info.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -342,8 +435,8 @@ const Step1PersonalShopper: React.FC<Step1PersonalShopperProps> = ({
       </div>
 
       <div className="space-y-2 pt-2 border-t">
-        <h4 className="text-sm font-semibold text-gray-900">소재 관리 가이드</h4>
-        <textarea name="careGuide" value={info.careGuide || ''} onChange={handleChange} placeholder="소재별 관리 방법이 자동 입력됩니다." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none h-24" />
+        <h4 className="text-sm font-semibold text-gray-900">사이즈 가이드</h4>
+        <textarea name="careGuide" value={info.careGuide || ''} onChange={handleChange} placeholder="사이즈 선택 팁이 자동 입력됩니다." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none h-24" />
       </div>
 
       <div className="space-y-2 pt-2 border-t">
@@ -351,6 +444,27 @@ const Step1PersonalShopper: React.FC<Step1PersonalShopperProps> = ({
         <input name="techLabel" value={info.techLabel || ''} onChange={handleChange} placeholder="라벨 (예: TECHNOLOGY)" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-transparent" />
         <input name="techTitle" value={info.techTitle || ''} onChange={handleChange} placeholder="제목 (예: CarbonLite)" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-transparent" />
         <textarea name="techDesc" value={info.techDesc || ''} onChange={handleChange} placeholder="설명" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-transparent resize-none" rows={2} />
+      </div>
+
+      <div className="pt-2 border-t space-y-2">
+        <button
+          onClick={handleManualAddToPreview}
+          className="w-full py-2 bg-gray-900 text-white rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          프리뷰에 추가 (텍스트 + 이미지)
+        </button>
+        <button
+          onClick={downloadProductHTML}
+          className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          HTML 다운로드
+        </button>
       </div>
 
       {onAddCustomText && (
@@ -370,4 +484,3 @@ const Step1PersonalShopper: React.FC<Step1PersonalShopperProps> = ({
 };
 
 export default Step1PersonalShopper;
-

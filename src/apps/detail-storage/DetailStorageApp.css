@@ -256,3 +256,45 @@
     background: white;
     min-height: 600px;
 }
+
+/* Mouse Trail Particle Effect */
+.mouse-particle {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    filter: blur(3px);
+    opacity: 0;
+    animation: particleFade 1.2s ease-out forwards;
+}
+
+@keyframes particleFade {
+    0% {
+        opacity: 0.8;
+        transform: translate(0, 0) scale(1);
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(var(--tx), var(--ty)) scale(0.3);
+    }
+}
+
+.mouse-particle:nth-child(2n) {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    width: 6px;
+    height: 6px;
+}
+
+.mouse-particle:nth-child(3n) {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    width: 10px;
+    height: 10px;
+}

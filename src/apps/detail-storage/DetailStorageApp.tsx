@@ -49,6 +49,7 @@ const DetailStorageApp = () => {
     const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
     const [step2Results, setStep2Results] = useState<ResultItem[]>([]);
     const [draggableItems, setDraggableItems] = useState<PreviewItem[]>([]);
+    const [stagedItems, setStagedItems] = useState<PreviewItem[]>([]); // Staging Area
     const [compatibleImages, setCompatibleImages] = useState<CompatibleUploadedImage[]>([]);
     const [viewMode, setViewMode] = useState<'main' | 'mobile' | 'desktop'>('main');
 
@@ -66,6 +67,7 @@ const DetailStorageApp = () => {
     ]);
     const [chatInput, setChatInput] = useState('');
     const [isChatLoading, setIsChatLoading] = useState(false);
+    const [isParticleEffectEnabled, setIsParticleEffectEnabled] = useState(true);
 
     const canvasRef = useRef<HTMLDivElement>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
@@ -84,6 +86,49 @@ const DetailStorageApp = () => {
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [chatMessages]);
+
+    // --- Mouse Particle Trail Effect ---
+    useEffect(() => {
+        if (!isParticleEffectEnabled) return;
+
+        let particleCount = 0;
+        const maxParticles = 50;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (particleCount >= maxParticles) return;
+
+            particleCount++;
+
+            const particle = document.createElement('div');
+            particle.className = 'mouse-particle';
+
+            // Random direction for particle movement
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 20 + Math.random() * 30;
+            const tx = Math.cos(angle) * distance;
+            const ty = Math.sin(angle) * distance;
+
+            particle.style.left = `${e.clientX}px`;
+            particle.style.top = `${e.clientY}px`;
+            particle.style.setProperty('--tx', `${tx}px`);
+            particle.style.setProperty('--ty', `${ty}px`);
+
+            document.body.appendChild(particle);
+
+            // Remove particle after animation completes
+            setTimeout(() => {
+                particle.remove();
+                particleCount--;
+            }, 1200);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+        };
+    }, [isParticleEffectEnabled]);
+
 
     // --- Canvas Logic ---
     const handleWheel = (e: React.WheelEvent) => {
@@ -108,6 +153,12 @@ const DetailStorageApp = () => {
 
     const handleCanvasMouseUp = () => {
         setIsDraggingCanvas(false);
+    };
+
+    const handleToggleSelection = (id: string) => {
+        setDraggableItems(prev => prev.map(item =>
+            item.id === id ? { ...item, isSelected: !item.isSelected } : item
+        ));
     };
 
     // --- Chat Logic ---
@@ -146,12 +197,22 @@ const DetailStorageApp = () => {
     <title>Product Detail Page</title>
 </head>
 <body>
-    <div class="product-detail">
+    <div class="product-detail" style="max-width: 860px; margin: 0 auto;">
         ${items.map((item) => {
             if (item.type === 'image' && item.imageUrl) {
-                return `<img src="${item.imageUrl}" alt="${item.title}" style="width: 100%; display: block;" />`;
+                // Apply cropping/resizing styles
+                const heightStyle = item.height ? `height: ${item.height}px;` : '';
+                const scale = item.imageScale || 1;
+                const x = item.imagePosition?.x || 0;
+                const y = item.imagePosition?.y || 0;
+
+                return `
+                <div style="width: 100%; overflow: hidden; position: relative; background: white; ${heightStyle}">
+                    <img src="${item.imageUrl}" alt="${item.title}" 
+                         style="width: 100%; display: block; transform: scale(${scale}) translate(${x}px, ${y}px); transform-origin: center center;" />
+                </div>`;
             } else if (item.type === 'section' && item.content) {
-                return `<div class="section"><pre>${item.content}</pre></div>`;
+                return `<div class="section">${item.content}</div>`;
             }
             return '';
         }).join('\n')}
@@ -203,15 +264,49 @@ const DetailStorageApp = () => {
         }
     };
 
-    const handleAddToPreview = (content: string, type: 'section' | 'image') => {
+    const handleAddToPreview = (content: string, type: 'section' | 'image', title?: string) => {
         setDraggableItems(prev => [...prev, {
             id: Math.random().toString(36).substr(2, 9),
             type: type,
             content: type === 'section' ? content : '',
             imageUrl: type === 'image' ? content : undefined,
-            title: type === 'section' ? 'Section' : 'Image',
-            isSelected: false
+            title: title || (type === 'section' ? 'Section' : 'Image'),
+            isSelected: false,
+            height: type === 'image' ? undefined : undefined // Default auto
         }]);
+    };
+
+    const handleUpdateItem = (id: string, updates: Partial<PreviewItem>) => {
+        setDraggableItems(prev => prev.map(item =>
+            item.id === id ? { ...item, ...updates } : item
+        ));
+    };
+
+    const handleMoveToStaging = (id: string) => {
+        const item = draggableItems.find(i => i.id === id);
+        if (item) {
+            setStagedItems(prev => [...prev, item]);
+            setDraggableItems(prev => prev.filter(i => i.id !== id));
+        }
+    };
+
+    const handleRestoreFromStaging = (id: string) => {
+        const item = stagedItems.find(i => i.id === id);
+        if (item) {
+            setDraggableItems(prev => [...prev, item]);
+            setStagedItems(prev => prev.filter(i => i.id !== id));
+        }
+    };
+
+    const handleMoveAllToStaging = () => {
+        if (draggableItems.length > 0) {
+            setStagedItems(prev => [...prev, ...draggableItems]);
+            setDraggableItems([]);
+        }
+    };
+
+    const handleBeautifyItem = (id: string) => {
+        alert("AI 미화 기능이 준비 중입니다. (이미지 화질 개선 및 톤 보정 예정)");
     };
 
     // --- Render Helpers ---
@@ -232,6 +327,7 @@ const DetailStorageApp = () => {
                         results={step2Results}
                         setResults={setStep2Results}
                         onAddToPreview={handleAddToPreview}
+                        onMoveAllToStaging={handleMoveAllToStaging}
                     />
                 );
             case 3:
@@ -283,36 +379,43 @@ const DetailStorageApp = () => {
                 <button className={`ds-tool-btn ${isChatOpen ? 'active' : ''}`} onClick={() => setIsChatOpen(!isChatOpen)} title="AI 채팅">{ICONS.chat}</button>
             </div>
 
-            {/* Floating Top Bar (Only for Final Review - Step 6) */}
-            {activePanel === 6 && (
-                <div className="ds-floating-topbar">
-                    <button
-                        className={`ds-view-btn ${viewMode === 'main' ? 'active' : ''}`}
-                        onClick={() => setViewMode('main')}
-                    >
-                        🎨 MAIN
-                    </button>
-                    <button
-                        className={`ds-view-btn ${viewMode === 'mobile' ? 'active' : ''}`}
-                        onClick={() => setViewMode('mobile')}
-                    >
-                        📱 Mobile
-                    </button>
-                    <button
-                        className={`ds-view-btn ${viewMode === 'desktop' ? 'active' : ''}`}
-                        onClick={() => setViewMode('desktop')}
-                    >
-                        💻 Desktop
-                    </button>
-                    <div className="w-px h-4 bg-gray-300 mx-2"></div>
-                    <button onClick={() => generateSimpleHTML(draggableItems)} className="text-xs font-bold text-blue-600 hover:text-blue-800 px-3">
-                        Download HTML
-                    </button>
-                    <button onClick={() => downloadAsJPG()} className="text-xs font-bold text-green-600 hover:text-green-800 px-3">
-                        Download JPG
-                    </button>
-                </div>
-            )}
+            {/* Floating Top Bar (Always Visible) */}
+            <div className="ds-floating-topbar">
+                <button
+                    className={`ds-view-btn ${viewMode === 'main' ? 'active' : ''}`}
+                    onClick={() => setViewMode('main')}
+                >
+                    🎨 MAIN
+                </button>
+                <button
+                    className={`ds-view-btn ${viewMode === 'mobile' ? 'active' : ''}`}
+                    onClick={() => setViewMode('mobile')}
+                >
+                    📱 Mobile
+                </button>
+                <button
+                    className={`ds-view-btn ${viewMode === 'desktop' ? 'active' : ''}`}
+                    onClick={() => setViewMode('desktop')}
+                >
+                    💻 Desktop
+                </button>
+                <div className="w-px h-4 bg-gray-300 mx-2"></div>
+                <button
+                    onClick={() => setIsParticleEffectEnabled(!isParticleEffectEnabled)}
+                    className={`ds-view-btn ${isParticleEffectEnabled ? 'active' : ''}`}
+                    title={isParticleEffectEnabled ? '마우스 효과 끄기' : '마우스 효과 켜기'}
+                >
+                    ✨ 효과
+                </button>
+                <div className="w-px h-4 bg-gray-300 mx-2"></div>
+                <button onClick={() => generateSimpleHTML(draggableItems)} className="text-xs font-bold text-blue-600 hover:text-blue-800 px-3">
+                    Download HTML
+                </button>
+                <button onClick={() => downloadAsJPG()} className="text-xs font-bold text-green-600 hover:text-green-800 px-3">
+                    Download JPG
+                </button>
+            </div>
+
 
             {/* Floating Right Panel (Config or Chat) */}
             {(activePanel || isChatOpen) && (
@@ -391,6 +494,14 @@ const DetailStorageApp = () => {
                             onMouseMove={handleCanvasMouseMove}
                             onMouseUp={handleCanvasMouseUp}
                             onMouseLeave={handleCanvasMouseUp}
+                            onClick={(e) => {
+                                // Calculate distance moved during click
+                                const dist = Math.hypot(e.clientX - lastMousePos.x, e.clientY - lastMousePos.y);
+                                // If moved less than 5px, treat as click and deselect all
+                                if (dist < 5 && !isDraggingCanvas) {
+                                    setDraggableItems(prev => prev.map(item => ({ ...item, isSelected: false })));
+                                }
+                            }}
                             style={{
                                 left: '50%',
                                 top: '100px',
@@ -407,6 +518,7 @@ const DetailStorageApp = () => {
                                 <DraggablePreview
                                     items={draggableItems}
                                     onReorder={setDraggableItems}
+                                    onToggleSelection={handleToggleSelection}
                                     onDeleteItem={(id) => setDraggableItems(prev => prev.filter(item => item.id !== id))}
                                     onDuplicateItem={(id) => {
                                         const itemToDuplicate = draggableItems.find(item => item.id === id);
@@ -423,11 +535,42 @@ const DetailStorageApp = () => {
                                             });
                                         }
                                     }}
+                                    onUpdateItem={handleUpdateItem}
+                                    onMoveToStaging={handleMoveToStaging}
+                                    onBeautifyItem={handleBeautifyItem}
                                 />
                             </div>
                         </div>
                     )}
                 </div>
+
+                {/* Staging Area Drawer */}
+                {stagedItems.length > 0 && (
+                    <div className="absolute bottom-4 left-4 right-4 bg-white rounded-xl shadow-xl border border-gray-200 p-4 z-50 flex flex-col gap-2 transition-all transform translate-y-0">
+                        <div className="flex justify-between items-center">
+                            <h3 className="text-sm font-bold text-gray-700">📦 보관함 (Staging Area) - {stagedItems.length} items</h3>
+                            <button onClick={() => setStagedItems([])} className="text-xs text-red-500 hover:text-red-700">비우기</button>
+                        </div>
+                        <div className="flex gap-2 overflow-x-auto p-2 bg-gray-50 rounded-lg min-h-[80px]">
+                            {stagedItems.map(item => (
+                                <div key={item.id} className="flex-shrink-0 w-20 h-20 bg-white border rounded overflow-hidden relative group cursor-pointer"
+                                    onClick={() => handleRestoreFromStaging(item.id)}
+                                    title="클릭하여 복구">
+                                    {item.type === 'image' && item.imageUrl ? (
+                                        <img src={item.imageUrl} className="w-full h-full object-cover opacity-75 group-hover:opacity-100" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-xs text-gray-500 p-1 text-center">
+                                            {item.title || 'Text'}
+                                        </div>
+                                    )}
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all">
+                                        <span className="text-white opacity-0 group-hover:opacity-100 text-lg">↩️</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Canvas Controls */}
                 <div className="ds-canvas-controls" style={{ right: (activePanel || isChatOpen) ? '400px' : '24px' }}>

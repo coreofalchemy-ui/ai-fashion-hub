@@ -161,14 +161,14 @@ const Step5FinalReview: React.FC<Step5FinalReviewProps> = ({ draggableItems, set
     };
 
     return (
-        <div className="space-y-6 p-6">
-            <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-1">Content Cuts</h3>
-                <p className="text-xs text-gray-600">4가지 템플릿을 편집하고 최종 프리뷰에 추가하세요</p>
+        <div className="space-y-2 p-2">
+            <div className="mb-1">
+                <h3 className="text-xs font-bold text-gray-900">Content Cuts</h3>
+                <p className="text-[9px] text-gray-500">4가지 템플릿을 편집하고 최종 프리뷰에 추가하세요</p>
             </div>
 
             {/* Template Selection Buttons */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-2">
                 {[
                     { type: 'sizeGuide' as TemplateType, label: 'SIZE GUIDE', icon: '📏' },
                     { type: 'care' as TemplateType, label: '케어', icon: '💧' },
@@ -178,23 +178,23 @@ const Step5FinalReview: React.FC<Step5FinalReviewProps> = ({ draggableItems, set
                     <button
                         key={type}
                         onClick={() => setActiveTemplate(activeTemplate === type ? null : type)}
-                        className={`p-4 rounded-lg border-2 transition-all ${activeTemplate === type
+                        className={`p-3 rounded border text-center ${activeTemplate === type
                             ? 'border-pink-500 bg-pink-50'
-                            : 'border-gray-200 hover:border-gray-300'
+                            : 'border-gray-200 hover:border-gray-300 bg-white'
                             }`}
                     >
-                        <div className="text-2xl mb-2">{icon}</div>
-                        <div className="text-sm font-semibold">{label}</div>
+                        <div className="text-xl mb-1">{icon}</div>
+                        <div className="text-[10px] font-semibold">{label}</div>
                     </button>
                 ))}
             </div>
 
             {/* SIZE GUIDE Editor */}
             {activeTemplate === 'sizeGuide' && (
-                <div className="bg-white p-4 rounded-lg border-2 border-pink-200 space-y-3">
-                    <h4 className="font-bold text-sm">📏 SIZE GUIDE 편집</h4>
+                <div className="bg-white p-2 rounded border border-pink-200 space-y-1">
+                    <h4 className="font-semibold text-[10px] mb-1">📏 SIZE GUIDE 편집</h4>
                     <div>
-                        <label className="block text-xs font-medium mb-1">신발 이미지 업로드</label>
+                        <label className="block text-[9px] font-medium mb-0.5">신발 이미지</label>
                         <input
                             type="file"
                             accept="image/*"
@@ -206,53 +206,38 @@ const Step5FinalReview: React.FC<Step5FinalReviewProps> = ({ draggableItems, set
                                     reader.readAsDataURL(file);
                                 }
                             }}
-                            className="block w-full text-xs file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
+                            className="block w-full text-[8px] file:mr-1 file:py-0.5 file:px-1 file:rounded file:border-0 file:text-[8px] file:bg-pink-50 file:text-pink-700"
                         />
-                        {uploadedShoeImage && (
-                            <img src={uploadedShoeImage} alt="Shoe" className="mt-2 max-w-xs rounded-lg" />
-                        )}
                     </div>
-                    <div className="grid grid-cols-3 gap-3">
-                        <div>
-                            <label className="block text-xs font-medium mb-1">가로</label>
-                            <input
-                                type="text"
-                                value={sizeGuideData.shoeLength}
-                                onChange={(e) => setSizeGuideData({ ...sizeGuideData, shoeLength: e.target.value })}
-                                className="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-pink-500"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-2">세로</label>
-                            <input
-                                type="text"
-                                value={sizeGuideData.shoeWidth}
-                                onChange={(e) => setSizeGuideData({ ...sizeGuideData, shoeWidth: e.target.value })}
-                                className="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-pink-500"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-2">굽 높이</label>
-                            <input
-                                type="text"
-                                value={sizeGuideData.heelHeight}
-                                onChange={(e) => setSizeGuideData({ ...sizeGuideData, heelHeight: e.target.value })}
-                                className="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-pink-500"
-                            />
-                        </div>
+                    <div className="grid grid-cols-3 gap-1">
+                        {[
+                            { label: '가로', key: 'shoeLength' },
+                            { label: '세로', key: 'shoeWidth' },
+                            { label: '굽', key: 'heelHeight' }
+                        ].map(({ label, key }) => (
+                            <div key={key}>
+                                <label className="block text-[8px] font-medium mb-0.5">{label}</label>
+                                <input
+                                    type="text"
+                                    value={sizeGuideData[key as keyof typeof sizeGuideData]}
+                                    onChange={(e) => setSizeGuideData({ ...sizeGuideData, [key]: e.target.value })}
+                                    className="w-full px-1 py-0.5 text-[9px] border rounded focus:ring-1 focus:ring-pink-500"
+                                />
+                            </div>
+                        ))}
                     </div>
                     <div>
-                        <label className="block text-sm font-medium mb-2">참고사항</label>
+                        <label className="block text-[8px] font-medium mb-0.5">참고사항</label>
                         <textarea
                             value={sizeGuideData.sizeNote}
                             onChange={(e) => setSizeGuideData({ ...sizeGuideData, sizeNote: e.target.value })}
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-pink-500"
+                            className="w-full px-1 py-0.5 text-[9px] border rounded focus:ring-1 focus:ring-pink-500"
                             rows={2}
                         />
                     </div>
                     <button
                         onClick={() => addTemplateToPreview('sizeGuide')}
-                        className="w-full py-3 bg-black text-white font-bold rounded-lg hover:bg-gray-800"
+                        className="w-full py-1 bg-black text-white text-[9px] font-semibold rounded hover:bg-gray-800"
                     >
                         프리뷰에 추가
                     </button>
@@ -261,12 +246,12 @@ const Step5FinalReview: React.FC<Step5FinalReviewProps> = ({ draggableItems, set
 
             {/* CARE Editor */}
             {activeTemplate === 'care' && (
-                <div className="bg-white p-6 rounded-lg border-2 border-pink-200 space-y-4">
-                    <h4 className="font-bold text-lg">💧 기타 주의 사항 편집</h4>
-                    <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white p-2 rounded border border-pink-200 space-y-1">
+                    <h4 className="font-semibold text-[10px] mb-1">💧 기타 주의 사항 편집</h4>
+                    <div className="grid grid-cols-1 gap-1">
                         {careItems.map((item, idx) => (
-                            <div key={idx} className="p-4 bg-gray-50 rounded-lg space-y-2">
-                                <div className="text-3xl">{item.icon}</div>
+                            <div key={idx} className="p-1 bg-gray-50 rounded space-y-0.5">
+                                <div className="text-sm">{item.icon}</div>
                                 <input
                                     type="text"
                                     value={item.title}
@@ -275,7 +260,7 @@ const Step5FinalReview: React.FC<Step5FinalReviewProps> = ({ draggableItems, set
                                         newItems[idx].title = e.target.value;
                                         setCareItems(newItems);
                                     }}
-                                    className="w-full px-2 py-1 font-semibold border rounded focus:ring-2 focus:ring-pink-500"
+                                    className="w-full px-1 py-0.5 text-[9px] font-semibold border rounded focus:ring-1 focus:ring-pink-500"
                                 />
                                 <textarea
                                     value={item.desc}
@@ -284,15 +269,15 @@ const Step5FinalReview: React.FC<Step5FinalReviewProps> = ({ draggableItems, set
                                         newItems[idx].desc = e.target.value;
                                         setCareItems(newItems);
                                     }}
-                                    className="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-pink-500"
-                                    rows={3}
+                                    className="w-full px-1 py-0.5 text-[8px] border rounded focus:ring-1 focus:ring-pink-500"
+                                    rows={2}
                                 />
                             </div>
                         ))}
                     </div>
                     <button
                         onClick={() => addTemplateToPreview('care')}
-                        className="w-full py-3 bg-black text-white font-bold rounded-lg hover:bg-gray-800"
+                        className="w-full py-1 bg-black text-white text-[9px] font-semibold rounded hover:bg-gray-800"
                     >
                         프리뷰에 추가
                     </button>
@@ -301,11 +286,11 @@ const Step5FinalReview: React.FC<Step5FinalReviewProps> = ({ draggableItems, set
 
             {/* SHIPPING Editor */}
             {activeTemplate === 'shipping' && (
-                <div className="bg-white p-6 rounded-lg border-2 border-pink-200 space-y-4">
-                    <h4 className="font-bold text-lg">📦 배송/교환/환불 편집</h4>
-                    <div className="space-y-4">
+                <div className="bg-white p-2 rounded border border-pink-200 space-y-1">
+                    <h4 className="font-semibold text-[10px] mb-1">📦 배송/교환/환불 편집</h4>
+                    <div className="space-y-1">
                         <div>
-                            <label className="block text-sm font-medium mb-2">배송/교환/환불 안내</label>
+                            <label className="block text-[8px] font-medium mb-0.5">배송/교환/환불 안내</label>
                             {shippingData.shippingItems.map((item, idx) => (
                                 <textarea
                                     key={idx}
@@ -315,13 +300,13 @@ const Step5FinalReview: React.FC<Step5FinalReviewProps> = ({ draggableItems, set
                                         newItems[idx] = e.target.value;
                                         setShippingData({ ...shippingData, shippingItems: newItems });
                                     }}
-                                    className="w-full px-3 py-2 border rounded-lg mb-2 focus:ring-2 focus:ring-pink-500"
-                                    rows={2}
+                                    className="w-full px-1 py-0.5 text-[9px] border rounded mb-0.5 focus:ring-1 focus:ring-pink-500"
+                                    rows={1}
                                 />
                             ))}
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-2">교환 및 환불 불가 안내</label>
+                            <label className="block text-[8px] font-medium mb-0.5">교환 및 환불 불가 안내</label>
                             {shippingData.exchangeItems.map((item, idx) => (
                                 <textarea
                                     key={idx}
@@ -331,15 +316,15 @@ const Step5FinalReview: React.FC<Step5FinalReviewProps> = ({ draggableItems, set
                                         newItems[idx] = e.target.value;
                                         setShippingData({ ...shippingData, exchangeItems: newItems });
                                     }}
-                                    className="w-full px-3 py-2 border rounded-lg mb-2 focus:ring-2 focus:ring-pink-500"
-                                    rows={2}
+                                    className="w-full px-1 py-0.5 text-[9px] border rounded mb-0.5 focus:ring-1 focus:ring-pink-500"
+                                    rows={1}
                                 />
                             ))}
                         </div>
                     </div>
                     <button
                         onClick={() => addTemplateToPreview('shipping')}
-                        className="w-full py-3 bg-black text-white font-bold rounded-lg hover:bg-gray-800"
+                        className="w-full py-1 bg-black text-white text-[9px] font-semibold rounded hover:bg-gray-800"
                     >
                         프리뷰에 추가
                     </button>
@@ -348,11 +333,11 @@ const Step5FinalReview: React.FC<Step5FinalReviewProps> = ({ draggableItems, set
 
             {/* CAUTION Editor */}
             {activeTemplate === 'caution' && (
-                <div className="bg-white p-6 rounded-lg border-2 border-pink-200 space-y-4">
-                    <h4 className="font-bold text-lg">⚠️ CAUTION 편집</h4>
-                    <div className="space-y-4">
+                <div className="bg-white p-2 rounded border border-pink-200 space-y-1">
+                    <h4 className="font-semibold text-[10px] mb-1">⚠️ CAUTION 편집</h4>
+                    <div className="space-y-1">
                         <div>
-                            <label className="block text-sm font-medium mb-2">주의사항</label>
+                            <label className="block text-[8px] font-medium mb-0.5">주의사항</label>
                             {cautionData.warnings.map((warning, idx) => (
                                 <textarea
                                     key={idx}
@@ -362,44 +347,44 @@ const Step5FinalReview: React.FC<Step5FinalReviewProps> = ({ draggableItems, set
                                         newWarnings[idx] = e.target.value;
                                         setCautionData({ ...cautionData, warnings: newWarnings });
                                     }}
-                                    className="w-full px-3 py-2 border rounded-lg mb-2 focus:ring-2 focus:ring-pink-500"
-                                    rows={3}
+                                    className="w-full px-1 py-0.5 text-[9px] border rounded mb-0.5 focus:ring-1 focus:ring-pink-500"
+                                    rows={2}
                                 />
                             ))}
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-2">A/S 센터 설명</label>
+                            <label className="block text-[8px] font-medium mb-0.5">A/S 센터</label>
                             <textarea
                                 value={cautionData.asCenter}
                                 onChange={(e) => setCautionData({ ...cautionData, asCenter: e.target.value })}
-                                className="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-pink-500"
-                                rows={2}
+                                className="w-full px-1 py-0.5 text-[9px] border rounded focus:ring-1 focus:ring-pink-500"
+                                rows={1}
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-1">
                             <div>
-                                <label className="block text-sm font-medium mb-2">고객센터 번호</label>
+                                <label className="block text-[8px] font-medium mb-0.5">고객센터</label>
                                 <input
                                     type="text"
                                     value={cautionData.asContact}
                                     onChange={(e) => setCautionData({ ...cautionData, asContact: e.target.value })}
-                                    className="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-pink-500"
+                                    className="w-full px-1 py-0.5 text-[9px] border rounded focus:ring-1 focus:ring-pink-500"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-2">카카오톡 채널</label>
+                                <label className="block text-[8px] font-medium mb-0.5">카카오톡</label>
                                 <input
                                     type="text"
                                     value={cautionData.asKakao}
                                     onChange={(e) => setCautionData({ ...cautionData, asKakao: e.target.value })}
-                                    className="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-pink-500"
+                                    className="w-full px-1 py-0.5 text-[9px] border rounded focus:ring-1 focus:ring-pink-500"
                                 />
                             </div>
                         </div>
                     </div>
                     <button
                         onClick={() => addTemplateToPreview('caution')}
-                        className="w-full py-3 bg-black text-white font-bold rounded-lg hover:bg-gray-800"
+                        className="w-full py-1 bg-black text-white text-[9px] font-semibold rounded hover:bg-gray-800"
                     >
                         프리뷰에 추가
                     </button>
@@ -408,9 +393,9 @@ const Step5FinalReview: React.FC<Step5FinalReviewProps> = ({ draggableItems, set
 
             {/* Instructions when no template selected */}
             {!activeTemplate && (
-                <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                    <p className="text-lg font-medium text-gray-700">위에서 템플릿을 선택하세요</p>
-                    <p className="text-sm text-gray-500 mt-2">4가지 템플릿을 편집하고 프리뷰에 추가할 수 있습니다</p>
+                <div className="text-center py-4 bg-gray-50 rounded border border-dashed border-gray-300">
+                    <p className="text-[10px] font-medium text-gray-700">위에서 템플릿을 선택하세요</p>
+                    <p className="text-[8px] text-gray-500 mt-0.5">4가지 템플릿을 편집하고 프리뷰에 추가할 수 있습니다</p>
                 </div>
             )}
         </div>

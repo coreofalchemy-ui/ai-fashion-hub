@@ -20,6 +20,7 @@ interface Step2ProductDetailsProps {
     setResults: React.Dispatch<React.SetStateAction<ResultItem[]>>;
     onNext: () => void;
     onAddToPreview?: (content: string, type: 'section' | 'image') => void;
+    onMoveAllToStaging?: () => void;
 }
 
 const EFFECTS: { id: Effect; label: string; icon: string; desc: string }[] = [
@@ -45,7 +46,8 @@ const Step2ProductDetails: React.FC<Step2ProductDetailsProps> = ({
     results,
     setResults,
     onNext,
-    onAddToPreview
+    onAddToPreview,
+    onMoveAllToStaging
 }) => {
     const [selectedEffect, setSelectedEffect] = useState<Effect>('beautify');
     const [customBackground, setCustomBackground] = useState<File | null>(null);
@@ -68,6 +70,11 @@ const Step2ProductDetails: React.FC<Step2ProductDetailsProps> = ({
         const timestamp = Date.now();
 
         if (selectedEffect === 'beautify') {
+            // Beautify Pack Logic: Move existing items to staging first
+            if (onMoveAllToStaging) {
+                onMoveAllToStaging();
+            }
+
             const primaryFile = uploadedImages[0].file;
             if (primaryFile) {
                 BEAUTIFY_POSES.forEach(pose => {
